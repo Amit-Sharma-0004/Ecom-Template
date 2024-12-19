@@ -11,7 +11,7 @@ export function middleware(request) {
     // Check for token in cookies
     const token = request.cookies.get("token");
 
-    if (!token) {
+    if (!token || token == undefined || token == null || token == "" || token == "undefined") {
         // Redirect to login page if no token is found
         return NextResponse.redirect(new URL("/login", request.url));
     }

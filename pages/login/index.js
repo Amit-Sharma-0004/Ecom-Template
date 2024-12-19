@@ -1,17 +1,93 @@
 import HomeLayout from "@/layouts/HomeLayout";
+import { useRouter } from "next/router";
 import React, { useState } from "react";
 import { FaEye, FaEyeSlash } from "react-icons/fa";
+import { Bounce, ToastContainer, toast } from "react-toastify";
+import { setCookie } from "cookies-next";
 
 const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
-    const [currentFormType, setCurrentFormType] = useState("login");
+    const [formType, setFormType] = useState("login");
+
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("");
+    const [error, setError] = useState("");
+    const router = useRouter();
 
     const togglePasswordVisibility = () => {
         setShowPassword(!showPassword);
     };
 
+    const handleFormSubmit = async (e) => {
+        e.preventDefault();
+        setError(""); // Reset errors
+
+        const id = toast.loading("Please wait...");
+        try {
+            const url =
+                formType === "login" ? "/api/auth/login" : "/api/auth/register";
+            const body =
+                formType === "login" ? { email, password } : { name, email, password };
+
+            const response = await fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                await new Promise((resolve) => setTimeout(resolve, 1500));
+                toast.update(id, {
+                    render: data.message,
+                    type: "error",
+                    isLoading: false,
+                });
+                setError(data.message);
+                return;
+            }
+            
+            if (formType === "login") {
+                toast.success("Success! You're logged in!");
+                setCookie("token", data.token, {
+                    path: "/",
+                    secure: true,
+                    sameSite: "strict",
+                });
+    
+                router.push("/");
+            } else {
+                toast.update(id, {
+                    render: data.message,
+                    type: "success",
+                    isLoading: false,
+                });
+                setFormType("login");
+            }
+
+        } catch (err) {
+            console.error("Error during login:", err); // Log the issue
+            setError(err.message); // Set the error message to display on the frontend
+        }
+    };
+
     return (
         <div className="flex flex-col w-full items-center bg-gray-50 py-10">
+            <ToastContainer
+                position="bottom-right"
+                autoClose={3000}
+                hideProgressBar={false}
+                newestOnTop={false}
+                closeOnClick={false}
+                rtl={false}
+                pauseOnFocusLoss
+                draggable
+                pauseOnHover
+                theme="light"
+                transition={Bounce}
+            />
             <div className="flex flex-col w-full items-center  min-h-[510px]">
                 {/* Breadcrumb */}
                 <div className="w-full max-w-6xl text-sm text-gray-500 mb-4">
@@ -19,30 +95,30 @@ const LoginPage = () => {
                 </div>
 
                 {/* Login/Register Form */}
-                <div className="w-full max-w-md bg-white shadow-lg rounded-md p-8 mb-16 ">
+                <div className="w-full max-w-md bg-white shadow-lg rounded-md p-8 pb-12 mb-16 transition-all delay-300 ease-in-out">
                     <div className="flex justify-center mb-6">
                         <span
-                            className={`text-lg font-bold pb-1 mr-4 cursor-pointer ${currentFormType === "login"
-                                ? "border-b-2 border-black"
-                                : "text-gray-400"
+                            className={`text-lg font-bold pb-1 mr-4 cursor-pointer ${formType === "login"
+                                    ? "border-b-2 border-black"
+                                    : "text-gray-400"
                                 }`}
-                            onClick={() => setCurrentFormType("login")}
+                            onClick={() => setFormType("login")}
                         >
                             LOGIN
                         </span>
                         <span
-                            className={`text-lg font-bold pb-1 cursor-pointer ${currentFormType === "register"
-                                ? "border-b-2 border-black"
-                                : "text-gray-400"
+                            className={`text-lg font-bold pb-1 cursor-pointer ${formType === "register"
+                                    ? "border-b-2 border-black"
+                                    : "text-gray-400"
                                 }`}
-                            onClick={() => setCurrentFormType("register")}
+                            onClick={() => setFormType("register")}
                         >
                             REGISTER
                         </span>
                     </div>
 
-                    {currentFormType === "login" ? (
-                        <form>
+                    {formType === "login" ? (
+                        <form onSubmit={handleFormSubmit}>
                             {/* Login Form */}
                             <div className="mb-4">
                                 <label
@@ -54,6 +130,8 @@ const LoginPage = () => {
                                 <input
                                     id="email"
                                     type="text"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     placeholder="Enter your email"
                                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
@@ -69,6 +147,8 @@ const LoginPage = () => {
                                 <input
                                     id="password"
                                     type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Enter your password"
                                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
@@ -99,7 +179,7 @@ const LoginPage = () => {
                             </button>
                         </form>
                     ) : (
-                        <form>
+                        <form onSubmit={handleFormSubmit}>
                             {/* Register Form */}
                             <div className="mb-4">
                                 <label
@@ -111,6 +191,8 @@ const LoginPage = () => {
                                 <input
                                     id="name"
                                     type="text"
+                                    value={name}
+                                    onChange={(e) => setName(e.target.value)}
                                     placeholder="Enter your full name"
                                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
@@ -126,6 +208,8 @@ const LoginPage = () => {
                                 <input
                                     id="email"
                                     type="email"
+                                    value={email}
+                                    onChange={(e) => setEmail(e.target.value)}
                                     placeholder="Enter your email"
                                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
@@ -141,6 +225,8 @@ const LoginPage = () => {
                                 <input
                                     id="password"
                                     type={showPassword ? "text" : "password"}
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
                                     placeholder="Create your password"
                                     className="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 />
